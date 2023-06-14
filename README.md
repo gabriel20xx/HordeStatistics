@@ -1,2 +1,1 @@
-# PhpSmbGallery
-PhpSmbGallery
+# ApiStatistics
