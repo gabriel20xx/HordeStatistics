@@ -41,7 +41,7 @@
 
     <script>
         $(document).ready(function() {
-            var modelArray = ['URPM', 'ChilloutMix', 'HRL', 'Liberty', 'Neurogen', 'PFG', 'Photon', 'PPP', 'RealBiter', 'Realisian', 'AbsoluteReality', 'Juggernaut XL', 'Analog Madness', 'BRA', 'Edge Of Realism', 'Zeipher Female Model', 'Hassanblend', 'Henmix Real', 'majicMIX realistic', 'Real Dos Mix', 'Realistic Vision'];
+            var modelArray = ['AbsoluteReality', 'Analog Madness', 'BRA', 'ChilloutMix', 'Edge Of Realism', 'Henmix Real', 'Hassanblend', 'HRL', 'Juggernaut XL', 'Liberty', 'majicMIX realistic', 'Neurogen', 'PFG', 'Photon', 'PPP', 'RealBiter', 'Real Dos Mix', 'Realisian', 'Realistic Vision', 'URPM', 'Zeipher Female Model'];
 
             // Object to store previous values for each model
             var previousValues = {};
@@ -115,7 +115,7 @@
                         // Call the function recursively with the next index after a delay
                         setTimeout(function() {
                             updateDataForModel(index + 1);
-                        }, 100);
+                        }, 120);
                     },
                     error: function(xhr, status, error) {
                         console.log('Error occurred while fetching data for model: ' + model);
