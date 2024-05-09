@@ -5,6 +5,7 @@
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         table {
+            width: 100%;
             border-collapse: collapse;
         }
 

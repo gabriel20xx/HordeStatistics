@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <style>
         table {
+            width: 100%;
             border-collapse: collapse;
         }
 
@@ -25,104 +27,35 @@
 </head>
 
 <body>
-    <select id="modelSelect">
-        <option value="URPM">URPM</option>
-        <option value="Zack3D">Zack3D</option>
-        <option value="PPP">PPP</option>
-    </select>
-
-    <p id="selectedModel"></p>
-
-    <table>
+    <table id="modelTable">
         <tr>
-            <th>Attribute</th>
-            <th>Value</th>
-            <th>Average (last 1 minute)</th>
-            <th>Average (last 1 hour)</th>
-            <th>Average (last 24 hours)</th>
-            <th>Last Changed</th>
-        </tr>
-        <tr>
-            <td>Name</td>
-            <td id="name"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>Count</td>
-            <td id="count"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>Performance</td>
-            <td id="performance"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>Queued</td>
-            <td id="queued"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>Jobs</td>
-            <td id="jobs"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>ETA</td>
-            <td id="eta"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
-        </tr>
-        <tr>
-            <td>Type</td>
-            <td id="type"></td>
-            <td class="average-minute"></td>
-            <td class="average-hour"></td>
-            <td class="average-day"></td>
-            <td class="last-changed"></td>
+            <th>Name</th>
+            <th>Count</th>
+            <th>Performance</th>
+            <th>Queued</th>
+            <th>Jobs</th>
+            <th>ETA</th>
+            <th>Type</th>
         </tr>
     </table>
 
     <script>
         $(document).ready(function() {
+            var modelArray = ['URPM', 'ChilloutMix', 'HRL', 'Liberty', 'Neurogen', 'PFG', 'Photon', 'PPP', 'RealBiter', 'Realisian', 'AbsoluteReality', 'Juggernaut XL', 'Analog Madness', 'BRA', 'Edge Of Realism', 'Zeipher Female Model', 'Hassanblend', 'Henmix Real', 'majicMIX realistic', 'Real Dos Mix', 'Realistic Vision'];
+
+            // Object to store previous values for each model
             var previousValues = {};
-            var valueHistory = {};
-            var averageIntervalMinute = 60; // Set the interval in seconds for calculating the average for the last minute
-            var averageIntervalHour = 3600; // Set the interval in seconds for calculating the average for the last hour
-            var averageIntervalDay = 86400; // Set the interval in seconds for calculating the average for the last day
+            // Object to store previous classes for each metric of each model
+            var previousClasses = {};
 
-            var modelSelect = $("#modelSelect");
-            var selectedModel = $("#selectedModel");
+            function updateDataForModel(index) {
+                if (index >= modelArray.length) {
+                    // Reset index if it exceeds array length
+                    index = 0;
+                }
 
-            modelSelect.on("change", function() {
-                var model = modelSelect.val();
-                selectedModel.text("Selected Model: " + model);
-            });
-
-            if (!modelSelect.val()) {
-                modelSelect.val(modelSelect.find("option:first").val());
-                selectedModel.text("Selected Model: " + modelSelect.val());
-            }
-
-            function updateData() {
-                var model = modelSelect.val();
+                var model = modelArray[index];
+                console.log(model);
                 $.ajax({
                     url: 'https://stablehorde.net/api/v2/status/models/' + model,
                     type: 'GET',
@@ -130,83 +63,74 @@
                     success: function(response) {
                         var data = response[0]; // Access the first object in the array
 
-                        var currentTime = Math.floor(Date.now() / 1000);
-                        $.each(data, function(key, value) {
-                            var element = $('#' + key);
-                            var currentValue = value.toString();
-                            var lastChangedElement = element.nextAll('.last-changed').first();
-                            var averageMinuteElement = lastChangedElement.prevAll('.average-minute').first();
-                            var averageHourElement = lastChangedElement.prevAll('.average-hour').first();
-                            var averageDayElement = lastChangedElement.prevAll('.average-day').first();
-                            var previousValue = previousValues[key] || '';
+                        // Create a new row for each model if it doesn't exist
+                        var row = $('#modelTable tr[model="' + model + '"]');
+                        if (row.length === 0) {
+                            row = $('<tr model="' + model + '">').appendTo('#modelTable');
+                        }
 
-                            if (currentValue !== previousValue) {
-                                element.text(currentValue);
-                                lastChangedElement.data('timestamp', currentTime);
-                                previousValues[key] = currentValue;
+                        // Check if there are previous values for the model
+                        var countClass = '';
+                        var performanceClass = '';
+                        var queuedClass = '';
+                        var jobsClass = '';
+                        var etaClass = '';
 
-                                if (previousValue !== '') {
-                                    if (parseFloat(currentValue) > parseFloat(previousValue)) {
-                                        element.addClass('increase');
-                                    } else if (parseFloat(currentValue) < parseFloat(previousValue)) {
-                                        element.addClass('decrease');
-                                    }
-                                }
-                            }
+                        if (previousValues[model]) {
+                            countClass = data.count > previousValues[model].count ? 'increase' : (data.count < previousValues[model].count ? 'decrease' : (previousClasses[model] && previousClasses[model].count ? previousClasses[model].count : ''));
+                            performanceClass = data.performance > previousValues[model].performance ? 'increase' : (data.performance < previousValues[model].performance ? 'decrease' : (previousClasses[model] && previousClasses[model].performance ? previousClasses[model].performance : ''));
+                            queuedClass = data.queued > previousValues[model].queued ? 'increase' : (data.queued < previousValues[model].queued ? 'decrease' : (previousClasses[model] && previousClasses[model].queued ? previousClasses[model].queued : ''));
+                            jobsClass = data.jobs > previousValues[model].jobs ? 'increase' : (data.jobs < previousValues[model].jobs ? 'decrease' : (previousClasses[model] && previousClasses[model].jobs ? previousClasses[model].jobs : ''));
+                            etaClass = data.eta > previousValues[model].eta ? 'increase' : (data.eta < previousValues[model].eta ? 'decrease' : (previousClasses[model] && previousClasses[model].eta ? previousClasses[model].eta : ''));
+                        }
 
-                            var secondsAgo = Math.round(currentTime - lastChangedElement.data('timestamp'));
-                            lastChangedElement.text(secondsAgo === 0 ? 'now' : secondsAgo + ' seconds ago');
+                        // Update table cells in the row with data from the JSON response
+                        row.html('' +
+                            '<td class="name">' + data.name + '</td>' +
+                            '<td class="count">' + (countClass ? '<span class="' + countClass + '">' + data.count + '</span>' : data.count) + '</td>' +
+                            '<td class="performance">' + (performanceClass ? '<span class="' + performanceClass + '">' + data.performance + '</span>' : data.performance) + '</td>' +
+                            '<td class="queued">' + (queuedClass ? '<span class="' + queuedClass + '">' + data.queued + '</span>' : data.queued) + '</td>' +
+                            '<td class="jobs">' + (jobsClass ? '<span class="' + jobsClass + '">' + data.jobs + '</span>' : data.jobs) + '</td>' +
+                            '<td class="eta">' + (etaClass ? '<span class="' + etaClass + '">' + data.eta + '</span>' : data.eta) + '</td>' +
+                            '<td class="type">' + data.type + '</td>'
+                        );
 
-                            // Calculate average (last 1 minute)
-                            if (!valueHistory[key]) {
-                                valueHistory[key] = [];
-                            }
-                            valueHistory[key].push({
-                                value: parseFloat(currentValue),
-                                timestamp: currentTime
-                            });
+                        // Update previous values and classes for the model
+                        previousValues[model] = {
+                            count: data.count,
+                            performance: data.performance,
+                            queued: data.queued,
+                            jobs: data.jobs,
+                            eta: data.eta
+                        };
 
-                            var averageValueMinute = calculateAverage(valueHistory[key], averageIntervalMinute);
-                            averageMinuteElement.text(averageValueMinute);
+                        previousClasses[model] = {
+                            count: countClass,
+                            performance: performanceClass,
+                            queued: queuedClass,
+                            jobs: jobsClass,
+                            eta: etaClass
+                        };
 
-                            // Calculate average (last 1 hour)
-                            var averageValueHour = calculateAverage(valueHistory[key], averageIntervalHour);
-                            averageHourElement.text(averageValueHour);
-
-                            // Calculate average (last 24 hours)
-                            var averageValueDay = calculateAverage(valueHistory[key], averageIntervalDay);
-                            averageDayElement.text(averageValueDay);
-                        });
+                        // Call the function recursively with the next index after a delay
+                        setTimeout(function() {
+                            updateDataForModel(index + 1);
+                        }, 100);
                     },
-                    error: function() {
-                        console.log('Error occurred while fetching data.');
+                    error: function(xhr, status, error) {
+                        console.log('Error occurred while fetching data for model: ' + model);
+                        // Call the function recursively with the next index after a delay even if an error occurs
+                        setTimeout(function() {
+                            updateDataForModel(index + 1);
+                        }, 5000); // Retry after 5 seconds
                     }
                 });
             }
-
-            // Calculate average
-            function calculateAverage(values, interval) {
-                var currentTime = Math.floor(Date.now() / 1000);
-                var timeThreshold = currentTime - interval;
-
-                // Filter values within the interval
-                var filteredValues = values.filter(function(valueTimestamp) {
-                    return valueTimestamp.timestamp >= timeThreshold && !isNaN(valueTimestamp.value);
-                });
-
-                if (filteredValues.length > 0) {
-                    var sum = filteredValues.reduce(function(total, valueTimestamp) {
-                        return total + valueTimestamp.value;
-                    }, 0);
-                    return (sum / filteredValues.length).toFixed(2);
-                } else {
-                    return 'N/A';
-                }
-            }
-
-            updateData();
-            setInterval(updateData, 1000);
+            // Start updating data for models
+            updateDataForModel(0);
         });
     </script>
+
 </body>
+
 </html>
