@@ -19,13 +19,13 @@ td {
 }
 .button-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 10px;
 }
 .button {
     padding: 10px 20px;
     text-align: center;
-    background-color: #4CAF50;
+    background-color: lightblue;
     color: white;
     border: none;
     border-radius: 5px;
@@ -34,5 +34,5 @@ td {
     cursor: pointer;
 }
 .button:hover {
-    background-color: #45a049;
+    background-color: blue;
 }
