@@ -21,6 +21,9 @@ td {
     display: flex;
     flex-direction: row;
     gap: 10px;
+    margin: 10px;
+    width: 100%;
+    justify-content: center;
 }
 .button {
     padding: 10px 20px;
