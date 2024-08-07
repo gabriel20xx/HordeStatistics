@@ -1,29 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style/style.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 8px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .increase {
-            color: green;
-        }
-
-        .decrease {
-            color: red;
-        }
-    </style>
 </head>
 
 <body>
@@ -141,6 +123,11 @@
             <td class="last-changed"></td>
         </tr>
     </table>
+
+    <div class="button-container">
+        <a href="index.php" class="button">Go to Index</a>
+        <a href="models.php" class="button">Go to Models</a>
+    </div>
 
     <script>
         $(document).ready(function() {
