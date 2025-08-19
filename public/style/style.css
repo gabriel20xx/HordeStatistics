@@ -1,0 +1,13 @@
+table { width: 100%; border-collapse: collapse; }
+th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+.increase { color: green; }
+.decrease { color: red; }
+.button-container { display: flex; flex-direction: row; gap: 10px; margin: 10px; width: 100%; justify-content: center; }
+.button { padding: 10px 20px; text-align: center; background-color: lightblue; color: white; border: none; border-radius: 5px; text-decoration: none; font-size: 16px; cursor: pointer; }
+.button:hover { background-color: blue; }
+/* Moved from inline <style> in index.html */
+.nav { display:flex; gap:8px; margin:10px 0; justify-content:center; }
+.hidden { display:none; }
+.nav button { padding:8px 14px; cursor:pointer; }
+h2 { margin-top:0; }
+.section { margin-bottom:40px; }

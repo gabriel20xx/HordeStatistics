@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horde Statistics</title>
+  <link rel="stylesheet" href="/style/style.css" />
+</head>
+<body>
+  <div class="nav">
+    <button data-view="performance" class="button">Performance</button>
+    <button data-view="models" class="button">Models</button>
+    <button data-view="history" class="button">Model History</button>
+  </div>
+
+  <!-- Performance Section -->
+  <div id="view-performance" class="section">
+    <h2>Performance</h2>
+    <table id="performanceTable">
+      <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Avg 1m</th>
+        <th>Avg 1h</th>
+        <th>Avg 24h</th>
+        <th>Last Changed</th>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Models Section -->
+  <div id="view-models" class="section hidden">
+    <h2>Models</h2>
+    <table id="modelTable">
+      <tr>
+        <th>Name</th>
+        <th>Count</th>
+        <th>Performance</th>
+        <th>Queued</th>
+        <th>Jobs</th>
+        <th>ETA</th>
+        <th>Type</th>
+      </tr>
+    </table>
+  </div>
+
+  <!-- Model History Section -->
+  <div id="view-history" class="section hidden">
+    <h2>Model History</h2>
+    <label>Model: <select id="modelSelect">
+      <option value="URPM">URPM</option>
+      <option value="Zack3D">Zack3D</option>
+      <option value="PPP">PPP</option>
+    </select></label>
+    <p id="selectedModel"></p>
+    <table id="historyTable">
+      <tr>
+        <th>Attribute</th>
+        <th>Value</th>
+        <th>Avg 1m</th>
+        <th>Avg 1h</th>
+        <th>Avg 24h</th>
+        <th>Last Changed</th>
+      </tr>
+    </table>
+  </div>
+
+  <script type="module">
+    // ---------- View Navigation ----------
+    const sections = {
+      performance: document.getElementById('view-performance'),
+      models: document.getElementById('view-models'),
+      history: document.getElementById('view-history')
+    };
+    document.querySelectorAll('.nav button').forEach(btn => {
+      btn.addEventListener('click', () => switchView(btn.dataset.view));
+    });
+    function switchView(target) {
+      Object.entries(sections).forEach(([k,el]) => {
+        if (k === target) el.classList.remove('hidden'); else el.classList.add('hidden');
+      });
+    }
+
+    // ---------- Shared utilities ----------
+    const intervals = { minute: 60, hour: 3600, day: 86400 };
+    const nowSec = () => (Date.now() / 1000) | 0;
+    function avg(list, range) {
+      const n = nowSec() - range;
+      const f = list.filter(x => x.timestamp >= n && !isNaN(x.value));
+      if (!f.length) return 'N/A';
+      return (f.reduce((a,b)=>a+b.value,0)/f.length).toFixed(2);
+    }
+
+    // ---------- Performance Logic ----------
+    const perfAttrs = ['worker_count','queued_requests','queued_text_requests','text_worker_count','thread_count','text_thread_count','queued_megapixelsteps','past_minute_megapixelsteps','queued_forms','interrogator_count','interrogator_thread_count','queued_tokens','past_minute_tokens'];
+    const perfTable = document.getElementById('performanceTable');
+    const perfPrev = {}; const perfHistory = {};
+    perfAttrs.forEach(a => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${a.replace(/_/g,' ')}</td><td id="${a}"></td><td class="average-minute"></td><td class="average-hour"></td><td class="average-day"></td><td class="last-changed"></td>`;
+      perfTable.appendChild(tr);
+    });
+    async function updatePerformance() {
+      try {
+        const r = await fetch('/api/performance');
+        if (!r.ok) throw new Error('perf fetch');
+        const data = await r.json();
+        const now = nowSec();
+        for (const [k,v] of Object.entries(data)) {
+          if (!perfAttrs.includes(k)) continue;
+          const el = document.getElementById(k);
+          const row = el.parentElement;
+          const lastChanged = row.querySelector('.last-changed');
+          const prev = perfPrev[k];
+          if (prev !== v) {
+            el.textContent = v;
+            lastChanged.dataset.timestamp = now;
+            perfPrev[k] = v;
+            if (prev !== undefined) {
+              el.classList.remove('increase','decrease');
+              if (parseFloat(v) > parseFloat(prev)) el.classList.add('increase');
+              else if (parseFloat(v) < parseFloat(prev)) el.classList.add('decrease');
+            }
+          }
+          const secs = now - (parseInt(lastChanged.dataset.timestamp)||now);
+          lastChanged.textContent = secs === 0 ? 'now' : secs + 's ago';
+          if (!perfHistory[k]) perfHistory[k] = [];
+          perfHistory[k].push({ value: parseFloat(v), timestamp: now });
+          row.querySelector('.average-minute').textContent = avg(perfHistory[k], intervals.minute);
+          row.querySelector('.average-hour').textContent = avg(perfHistory[k], intervals.hour);
+          row.querySelector('.average-day').textContent = avg(perfHistory[k], intervals.day);
+        }
+      } catch(e) { console.error(e); }
+    }
+    setInterval(updatePerformance, 1000); updatePerformance();
+
+    // ---------- Models List Logic ----------
+    const modelArray = ['AbsoluteReality','Analog Madness','BRA','ChilloutMix','Edge Of Realism','Henmix Real','Hassanblend','HRL','Juggernaut XL','Liberty','majicMIX realistic','Neurogen','PFG','Photon','PPP','RealBiter','Real Dos Mix','Realisian','Realistic Vision','URPM','Zeipher Female Model'];
+    const modelPrev = {}; const modelPrevClasses = {};
+    const modelTable = document.getElementById('modelTable');
+    async function fetchModel(name){
+      try { const r = await fetch('/api/models/' + encodeURIComponent(name)); if(!r.ok) throw new Error(r.status); const a = await r.json(); return a[0]; } catch(e){ console.error('model', name, e); return null; }
+    }
+    function renderModel(name, data){
+      if(!data) return; let row = modelTable.querySelector(`tr[model="${name}"]`); if(!row){ row = document.createElement('tr'); row.setAttribute('model', name); modelTable.appendChild(row);} const prev = modelPrev[name];
+      const delta = metric => { if(!prev) return ''; if(data[metric] > prev[metric]) return 'increase'; if(data[metric] < prev[metric]) return 'decrease'; return modelPrevClasses[name]?.[metric]||''; };
+      const cls = { count: delta('count'), performance: delta('performance'), queued: delta('queued'), jobs: delta('jobs'), eta: delta('eta') };
+      row.innerHTML = `
+        <td class="name">${data.name}</td>
+        <td class="count">${cls.count?`<span class="${cls.count}">${data.count}</span>`:data.count}</td>
+        <td class="performance">${cls.performance?`<span class="${cls.performance}">${data.performance}</span>`:data.performance}</td>
+        <td class="queued">${cls.queued?`<span class="${cls.queued}">${data.queued}</span>`:data.queued}</td>
+        <td class="jobs">${cls.jobs?`<span class="${cls.jobs}">${data.jobs}</span>`:data.jobs}</td>
+        <td class="eta">${cls.eta?`<span class="${cls.eta}">${data.eta}</span>`:data.eta}</td>
+        <td class="type">${data.type}</td>`;
+      modelPrev[name] = { count:data.count, performance:data.performance, queued:data.queued, jobs:data.jobs, eta:data.eta };
+      modelPrevClasses[name] = cls;
+    }
+    async function modelLoop(i=0){ const name = modelArray[i % modelArray.length]; const data = await fetchModel(name); renderModel(name, data); setTimeout(()=>modelLoop(i+1), 120); }
+    modelLoop();
+
+    // ---------- Model History Logic ----------
+    const historyAttrs = ['name','count','performance','queued','jobs','eta','type'];
+    const historyTable = document.getElementById('historyTable');
+    const modelSelect = document.getElementById('modelSelect');
+    const selectedModelLabel = document.getElementById('selectedModel');
+    const historyPrev = {}; const historyHist = {};
+    historyAttrs.forEach(a => { const tr = document.createElement('tr'); tr.innerHTML = `<td>${a}</td><td id="hist-${a}"></td><td class="average-minute"></td><td class="average-hour"></td><td class="average-day"></td><td class="last-changed"></td>`; historyTable.appendChild(tr); });
+    selectedModelLabel.textContent = 'Selected Model: ' + modelSelect.value;
+    modelSelect.addEventListener('change', ()=> { selectedModelLabel.textContent = 'Selected Model: ' + modelSelect.value; historyAttrs.forEach(k=>{ historyHist[k]=[]; delete historyPrev[k]; }); });
+    async function updateHistory(){
+      const model = modelSelect.value; try { const r = await fetch('/api/models/' + encodeURIComponent(model)); if(!r.ok) throw new Error(r.status); const arr = await r.json(); const data = arr[0]; const now = nowSec();
+        for (const [k,v] of Object.entries(data)) { if(!historyAttrs.includes(k)) continue; const cell = document.getElementById('hist-'+k); const row = cell.parentElement; const last = row.querySelector('.last-changed'); const prev = historyPrev[k]; const valStr = v.toString(); if (valStr !== prev){ cell.textContent = valStr; last.dataset.timestamp = now; historyPrev[k]=valStr; if(prev!==undefined){ cell.classList.remove('increase','decrease'); if(parseFloat(valStr)>parseFloat(prev)) cell.classList.add('increase'); else if(parseFloat(valStr)<parseFloat(prev)) cell.classList.add('decrease'); }} const secs = now - (parseInt(last.dataset.timestamp)||now); last.textContent = secs===0?'now':secs+'s ago'; if(!historyHist[k]) historyHist[k]=[]; historyHist[k].push({ value: parseFloat(valStr), timestamp: now }); row.querySelector('.average-minute').textContent = avg(historyHist[k], intervals.minute); row.querySelector('.average-hour').textContent = avg(historyHist[k], intervals.hour); row.querySelector('.average-day').textContent = avg(historyHist[k], intervals.day);} }
+      catch(e){ console.error('history fetch', e); }
+    }
+    setInterval(updateHistory, 1000); updateHistory();
+  </script>
+</body>
+</html>
